@@ -26,9 +26,11 @@ class my_dataset(Dataset):
             self.train_image_paths = []
             for config in configs:
                 if config == "000" and alpha != 1500 and remove_node != "100":  
-                    path_pattern = f"input/{dataset}/train_{remove_node}/{prefix}_000_*{ext}" 
+                    # path_pattern = f"input/{dataset}/train_{remove_node}/{prefix}_000_*{ext}" 
+                    path_pattern = f"input/{dataset}/train/{prefix}_000_*{ext}" 
                 else: 
-                    path_pattern = f"working/{dataset}/train/{prefix}_{config}_*{ext}"
+                    # path_pattern = f"working/{dataset}/train/{prefix}_{config}_*{ext}"
+                    path_pattern = f"input/{dataset}/train/{prefix}_000_*{ext}" 
                 new_paths = glob.glob(path_pattern)
         
                 if remove_node == config:
