@@ -10,7 +10,8 @@ import torchvision.datasets as datasets
 from sklearn import metrics
 from sklearn import decomposition
 from sklearn import manifold
-from tqdm.notebook import trange, tqdm
+# from tqdm.notebook import trange, tqdm
+from tqdm import tqdm, trange
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -21,6 +22,7 @@ import classifier_load_dataset
 import itertools
 import json
 
+import sys
 
 
 class MLP(nn.Module):
@@ -50,21 +52,31 @@ def train(model, iterator, optimizer, criterion, device):
     epoch_acc = {0: 0, 1: 0, 2: 0}
     model.train()
 
-    for (x, y) in tqdm(iterator, desc="Training", leave=False):
-        x = x.to(device)
-        optimizer.zero_grad()
-        y_pred = model(x)
-        loss = criterion(y_pred[0], y[0]) + criterion(y_pred[1], y[1]) + criterion(y_pred[2], y[2])
-        acc = {}
-        acc[0] = calculate_accuracy(y_pred[0], y[0])
-        acc[1] = calculate_accuracy(y_pred[1], y[1])
-        acc[2] = calculate_accuracy(y_pred[2], y[2])
-        loss.backward()
-        optimizer.step()
-        epoch_loss += loss.item()
-        epoch_acc[0] += acc[0].item()
-        epoch_acc[1] += acc[1].item()
-        epoch_acc[2] += acc[2].item()
+    with tqdm(iterator, desc="Training", leave=True, file=sys.stdout) as pbar:
+        for (x, y) in pbar:
+            # Training loop
+            pbar.update(1)
+
+        # for (x, y) in tqdm(iterator, desc="Training", leave=False):
+            # print(f"y values: {y}")  # Check if labels are valid
+
+            x = x.to(device)
+            optimizer.zero_grad()
+            y_pred = model(x)
+
+            # print("y_pred : ", y_pred)
+
+            loss = criterion(y_pred[0], y[0]) + criterion(y_pred[1], y[1]) + criterion(y_pred[2], y[2])
+            acc = {}
+            acc[0] = calculate_accuracy(y_pred[0], y[0])
+            acc[1] = calculate_accuracy(y_pred[1], y[1])
+            acc[2] = calculate_accuracy(y_pred[2], y[2])
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item()
+            epoch_acc[0] += acc[0].item()
+            epoch_acc[1] += acc[1].item()
+            epoch_acc[2] += acc[2].item()
 
     epoch_acc[0] /= len(iterator)
     epoch_acc[1] /= len(iterator)
@@ -84,21 +96,25 @@ def evaluate(model, iterator, criterion, device):
 
     model.eval()
     with torch.no_grad():
-        for (x, y) in tqdm(iterator, desc="Evaluating", leave=False):
-            x = x.to(device)
-            #y = _y[key].to(device)
+        with tqdm(iterator, desc="Training", leave=True, file=sys.stdout) as pbar:
+            for (x, y) in pbar:
+                # Training loop
+                pbar.update(1)
+            # for (x, y) in tqdm(iterator, desc="Evaluating", leave=False):
+                x = x.to(device)
+                #y = _y[key].to(device)
 
-            y_pred = model(x)
-            loss = criterion(y_pred[0], y[0]) + criterion(y_pred[1], y[1]) + criterion(y_pred[2], y[2])
-            acc = {}
-            acc[0] = calculate_accuracy(y_pred[0], y[0])
-            acc[1] = calculate_accuracy(y_pred[1], y[1])
-            acc[2] = calculate_accuracy(y_pred[2], y[2])
-            epoch_loss += loss.item()
-            #epoch_acc += acc.item()
-            epoch_acc[0] += acc[0].item()
-            epoch_acc[1] += acc[1].item()
-            epoch_acc[2] += acc[2].item()
+                y_pred = model(x)
+                loss = criterion(y_pred[0], y[0]) + criterion(y_pred[1], y[1]) + criterion(y_pred[2], y[2])
+                acc = {}
+                acc[0] = calculate_accuracy(y_pred[0], y[0])
+                acc[1] = calculate_accuracy(y_pred[1], y[1])
+                acc[2] = calculate_accuracy(y_pred[2], y[2])
+                epoch_loss += loss.item()
+                #epoch_acc += acc.item()
+                epoch_acc[0] += acc[0].item()
+                epoch_acc[1] += acc[1].item()
+                epoch_acc[2] += acc[2].item()
 
     epoch_acc[0] /= len(iterator)
     epoch_acc[1] /= len(iterator)
@@ -136,12 +152,16 @@ if __name__ == "__main__":
         configs.append("".join(permutation.values()))
     
     
+    
     pixel_size = 28
-    n_class_color = 2 #3
+    # n_class_color = 2 #3
+    n_class_color = 3
+
 
     tf = transforms.Compose([transforms.Resize((pixel_size,pixel_size)), transforms.ToTensor()])
     train_dataset = classifier_load_dataset.my_dataset(tf, 5000, dataset, configs=configs, training=True, n_class_color=n_class_color)
     test_data = classifier_load_dataset.my_dataset(tf, 500, dataset, configs=configs, training=True, n_class_color=n_class_color)
+    # test_data = classifier_load_dataset.my_dataset(tf, 500, dataset, configs=configs, training=False, n_class_color=n_class_color)
 
     train_data, valid_data = data.random_split(train_dataset, [4500, 500])
     BATCH_SIZE = 128
@@ -152,8 +172,8 @@ if __name__ == "__main__":
     
     
     INPUT_DIM = pixel_size * pixel_size * 3 #4
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cpu')
 
     #for key in ["shapes","colors","sizes"]:
     OUTPUT_DIMS = [len(properties[key]) for key in ["shapes","colors","sizes"]]
@@ -176,7 +196,7 @@ if __name__ == "__main__":
     
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
-            torch.save(model.state_dict(), 'working/linear-classifier_'+dataset+'_multi-class.pt')
+            # torch.save(model.state_dict(), 'working/linear-classifier_'+dataset+'_multi-class.pt')
     
         end_time = time.monotonic()
     
